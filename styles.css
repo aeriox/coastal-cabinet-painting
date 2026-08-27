@@ -61,6 +61,9 @@ img { max-width: 100%; display: block; }
   -webkit-backdrop-filter: blur(16px);
 }
 .mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
   font-stretch: 112%;
   font-weight: 700;
   font-size: 13px;
@@ -68,7 +71,9 @@ img { max-width: 100%; display: block; }
   text-transform: uppercase;
   text-decoration: none;
   white-space: nowrap;
+  color: var(--fg);
 }
+.mark img { width: 18px; height: 22px; object-fit: contain; filter: invert(1); }
 .nav-links { display: flex; gap: 1.05rem; }
 .nav-links a {
   font-size: 11px;
@@ -178,7 +183,18 @@ h1 {
 .band.dark {
   background: var(--dark);
   color: var(--ondark);
+  position: relative;
+  overflow: hidden;
 }
+.band.dark::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url("assets/door-texture.jpg") center/cover no-repeat;
+  opacity: 0.28;
+  transform: scale(1.04);
+}
+.band.dark > * { position: relative; z-index: 1; }
 .pull {
   font-stretch: 112%;
   font-weight: 600;
