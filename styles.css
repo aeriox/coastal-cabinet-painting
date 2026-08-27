@@ -210,9 +210,11 @@ h1 {
   height: 72vh;
   min-height: 420px;
   object-fit: cover;
+  object-position: center 70%;
   transform: scale(1.02);
   transition: transform 0.9s var(--ease);
 }
+.hero img { object-position: center 62%; }
 .gallery a:hover img { transform: scale(1.06); }
 .gallery figcaption, .gallery .cap {
   position: absolute;
