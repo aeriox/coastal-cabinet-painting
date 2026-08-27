@@ -10,8 +10,8 @@ Site Sprint preview. Not shipped. SHIP pending.
 - Deadline: 2026-09-10
 - Out of scope: custom app backend, SEO retainer, ads, publishing their home address
 - Asset list (Create): assets/hero.jpg, assets/work-1.jpg through work-5.jpg (from their Instagram, 2025–2026 jobs)
-- Repo URL: pending
-- Preview URL: pending
+- Repo URL: https://github.com/aeriox/coastal-cabinet-painting
+- Preview URL: https://coastal-cabinet-painting-eight.vercel.app
 - Prod URL: pending
 - Acceptance tests (max 8):
   1. Home names Chris and Brandon and Jupiter/Tequesta.
