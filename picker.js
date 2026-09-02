@@ -53,12 +53,17 @@
     html.setAttribute("data-palette", state.palette || DEFAULTS.palette);
     html.setAttribute("data-nav", state.nav || DEFAULTS.nav);
     const src = (LOGOS[state.logo] || LOGOS.door).src;
-    const word = !!WORDMARK[state.logo];
     document.querySelectorAll(".mark img").forEach(function (img) {
       img.src = src;
     });
     document.querySelectorAll("a.mark").forEach(function (a) {
-      a.classList.toggle("mark-wordmark", word);
+      a.classList.remove("mark-wordmark");
+      for (var i = 0; i < a.childNodes.length; i++) {
+        var node = a.childNodes[i];
+        if (node.nodeType === 3 && node.textContent.trim()) {
+          node.textContent = "Coastal Cabinet Painting";
+        }
+      }
     });
     if (write) persist();
     syncActive();
