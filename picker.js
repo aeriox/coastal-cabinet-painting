@@ -5,24 +5,18 @@
     theme: "light",
     font: "archivo",
     palette: "cream",
-    logo: "door",
+    logo: "box",
     logoVariant: "",
     nav: "pill"
   };
   const LOGOS = {
-    door: { src: "assets/mark.svg", label: "Door" },
-    panels: { label: "Panels", variants: { color: "assets/logo-opts/canva-panels-color.png" }, wordmark: true },
-    sprayer: { label: "Sprayer", variants: { color: "assets/logo-opts/canva-sprayer-color.png", dark: "assets/logo-opts/canva-sprayer-dark.png" }, wordmark: true },
-    palm: { label: "Palm", variants: { light: "assets/logo-opts/canva-palm-light.png", dark: "assets/logo-opts/canva-palm-dark.png" }, wordmark: true },
-    square: { label: "Square", variants: { light: "assets/logo-opts/canva-square-light.png" }, wordmark: true },
-    crest: { src: "assets/logo-opts/nano-1.png", label: "Crest" },
-    lockup: { src: "assets/logo-opts/nano-2.png", label: "Lockup" },
-    panel: { src: "assets/logo-opts/opt-1.png", label: "Panel" },
-    wave: { src: "assets/logo-opts/opt-2.png", label: "Wave" },
-    ccp: { src: "assets/logo-opts/opt-3.png", label: "CCP" }
+    box: { label: "Box", wordmark: true, variants: { color: "assets/logo-opts/canva-box-color.png", light: "assets/logo-opts/canva-box-light.png", dark: "assets/logo-opts/canva-box-dark.png" } },
+    panels: { label: "Panels", wordmark: true, variants: { light: "assets/logo-opts/canva-panels-light.png", dark: "assets/logo-opts/canva-panels-dark.png" } },
+    crest: { label: "Crest", wordmark: true, variants: { light: "assets/logo-opts/canva-crest-light.png", dark: "assets/logo-opts/canva-crest-dark.png" } },
+    sprayer: { label: "Sprayer", wordmark: true, variants: { color: "assets/logo-opts/canva-sprayer-color.png", dark: "assets/logo-opts/canva-sprayer-dark.png" } }
   };
-  const WORDMARK = { crest: true, lockup: true };
-  const LOGO_ORDER = ["door", "panels", "sprayer", "palm", "square", "crest", "lockup", "panel", "wave", "ccp"];
+  const WORDMARK = {};
+  const LOGO_ORDER = ["box", "panels", "crest", "sprayer"];
   const FINISHES = [
     { val: "light", label: "Light" },
     { val: "dark", label: "Dark" },
@@ -58,7 +52,7 @@
   }
 
   function currentMeta() {
-    return LOGOS[state.logo] || LOGOS.door;
+    return LOGOS[state.logo] || LOGOS.box;
   }
 
   function firstVariantSrc(variants) {
@@ -86,7 +80,7 @@
       return v.light || v.color || firstVariantSrc(v);
     }
     if (meta.src) return meta.src;
-    return LOGOS.door.src;
+    const fallback = LOGOS.box; return fallback.variants[autoVariantKey(fallback)] || firstVariantSrc(fallback.variants);
   }
 
   function thumbSrc(meta) {
@@ -131,7 +125,7 @@
 
   function set(key, value) {
     if (key === "logo") {
-      const next = LOGOS[value] || LOGOS.door;
+      const next = LOGOS[value] || LOGOS.box;
       if (!next.variants || !state.logoVariant || !next.variants[state.logoVariant]) {
         state.logoVariant = "";
       }
