@@ -13,15 +13,11 @@
     box: { label: "Box", wordmark: true, variants: { color: "assets/logo-opts/canva-box-color.png", light: "assets/logo-opts/canva-box-light.png", dark: "assets/logo-opts/canva-box-dark.png" } },
     panels: { label: "Panels", wordmark: true, variants: { light: "assets/logo-opts/canva-panels-light.png", dark: "assets/logo-opts/canva-panels-dark.png" } },
     crest: { label: "Crest", wordmark: true, variants: { light: "assets/logo-opts/canva-crest-light.png", dark: "assets/logo-opts/canva-crest-dark.png" } },
-    sprayer: { label: "Sprayer", wordmark: true, variants: { color: "assets/logo-opts/canva-sprayer-color.png", dark: "assets/logo-opts/canva-sprayer-dark.png" } }
+    sprayer: { label: "Sprayer", wordmark: true, variants: { light: "assets/logo-opts/canva-sprayer-color.png", dark: "assets/logo-opts/canva-sprayer-dark.png" } }
   };
   const WORDMARK = {};
   const LOGO_ORDER = ["box", "panels", "crest", "sprayer"];
-  const FINISHES = [
-    { val: "light", label: "Light" },
-    { val: "dark", label: "Dark" },
-    { val: "color", label: "Color" }
-  ];
+  const FINISHES = [];
 
   const state = load();
 
@@ -64,7 +60,8 @@
   function autoVariantKey(meta) {
     const v = meta && meta.variants;
     if (!v) return "";
-    if (state.theme === "dark" && v.dark) return "dark";
+    if (state.theme === "dark") return v.dark ? "dark" : (v.light ? "light" : "");
+    if (state.logo === "box" && state.logoVariant === "color" && v.color) return "color";
     if (v.light) return "light";
     if (v.color) return "color";
     const keys = Object.keys(v);
@@ -75,9 +72,9 @@
     const meta = currentMeta();
     if (meta.variants) {
       const v = meta.variants;
-      if (state.logoVariant && v[state.logoVariant]) return v[state.logoVariant];
-      if (state.theme === "dark" && v.dark) return v.dark;
-      return v.light || v.color || firstVariantSrc(v);
+      const key = autoVariantKey(meta);
+      if (key && v[key]) return v[key];
+      return v.light || v.dark || v.color || firstVariantSrc(v);
     }
     if (meta.src) return meta.src;
     const fallback = LOGOS.box; return fallback.variants[autoVariantKey(fallback)] || firstVariantSrc(fallback.variants);
@@ -125,10 +122,15 @@
 
   function set(key, value) {
     if (key === "logo") {
-      const next = LOGOS[value] || LOGOS.box;
-      if (!next.variants || !state.logoVariant || !next.variants[state.logoVariant]) {
-        state.logoVariant = "";
-      }
+      if (value !== "box") state.logoVariant = "";
+    }
+    if (key === "theme" && value === "dark" && state.logoVariant === "color") {
+      state.logoVariant = "";
+    }
+    if (key === "logoVariant" && state.logoVariant === value) {
+      state.logoVariant = "";
+      apply(true);
+      return;
     }
     state[key] = value;
     apply(true);
@@ -147,18 +149,17 @@
   }
 
   function syncActive() {
-    const meta = currentMeta();
-    const autoKey = autoVariantKey(meta);
+    const colorRow = document.getElementById("look-box-color");
+    if (colorRow) {
+      const show = state.logo === "box" && state.theme !== "dark";
+      if (show) colorRow.removeAttribute("hidden");
+      else colorRow.setAttribute("hidden", "hidden");
+    }
     document.querySelectorAll("[data-look-key]").forEach(function (btn) {
       const key = btn.getAttribute("data-look-key");
       const val = btn.getAttribute("data-look-val");
       if (key === "logoVariant") {
-        const has = !!(meta.variants && meta.variants[val]);
-        btn.classList.toggle("is-disabled", !has);
-        if (!has) btn.setAttribute("aria-disabled", "true");
-        else btn.removeAttribute("aria-disabled");
-        const chosen = state.logoVariant || autoKey;
-        btn.classList.toggle("is-active", has && chosen === val && (state.logoVariant === val || (!state.logoVariant && autoKey === val)));
+        btn.classList.toggle("is-active", state.logo === "box" && state.theme !== "dark" && state.logoVariant === "color");
         return;
       }
       btn.classList.toggle("is-active", state[key] === val);
@@ -227,9 +228,9 @@
 
     panel.appendChild(head);
     panel.appendChild(section("Logos", LOGO_ORDER.map(logoChip)));
-    panel.appendChild(section("Logo finish", FINISHES.map(function (f) {
-      return chip("logoVariant", f.val, f.label);
-    })));
+    const colorSec = section("Box", [chip("logoVariant", "color", "Color")]);
+    colorSec.id = "look-box-color";
+    panel.appendChild(colorSec);
     panel.appendChild(section("Header", [
       chip("nav", "pill", "Pill"),
       chip("nav", "bar", "Full width")
