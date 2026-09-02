@@ -5,14 +5,18 @@
     theme: "light",
     font: "archivo",
     palette: "cream",
-    logo: "door"
+    logo: "door",
+    nav: "pill"
   };
   const LOGOS = {
     door: { src: "assets/mark.svg", label: "Door" },
+    crest: { src: "assets/logo-opts/nano-1.png", label: "Crest" },
+    lockup: { src: "assets/logo-opts/nano-2.png", label: "Lockup" },
     panel: { src: "assets/logo-opts/opt-1.png", label: "Panel" },
     wave: { src: "assets/logo-opts/opt-2.png", label: "Wave" },
     ccp: { src: "assets/logo-opts/opt-3.png", label: "CCP" }
   };
+  const WORDMARK = { crest: true, lockup: true };
 
   const state = load();
 
@@ -35,7 +39,8 @@
         theme: state.theme,
         font: state.font,
         palette: state.palette,
-        logo: state.logo
+        logo: state.logo,
+        nav: state.nav
       }));
     } catch (e) {}
   }
@@ -46,9 +51,14 @@
     html.setAttribute("data-theme", state.theme || DEFAULTS.theme);
     html.setAttribute("data-font", state.font || DEFAULTS.font);
     html.setAttribute("data-palette", state.palette || DEFAULTS.palette);
+    html.setAttribute("data-nav", state.nav || DEFAULTS.nav);
     const src = (LOGOS[state.logo] || LOGOS.door).src;
+    const word = !!WORDMARK[state.logo];
     document.querySelectorAll(".mark img").forEach(function (img) {
       img.src = src;
+    });
+    document.querySelectorAll("a.mark").forEach(function (a) {
+      a.classList.toggle("mark-wordmark", word);
     });
     if (write) persist();
     syncActive();
@@ -66,6 +76,7 @@
     state.font = DEFAULTS.font;
     state.palette = DEFAULTS.palette;
     state.logo = DEFAULTS.logo;
+    state.nav = DEFAULTS.nav;
     apply(false);
   }
 
@@ -83,6 +94,7 @@
       Object.keys(attrs).forEach(function (k) {
         if (k === "className") n.className = attrs[k];
         else if (k === "text") n.textContent = attrs[k];
+        else if (k === "html") n.innerHTML = attrs[k];
         else n.setAttribute(k, attrs[k]);
       });
     }
@@ -127,8 +139,8 @@
 
   function build() {
     const root = el("div", { className: "look-picker", id: "look-picker" });
-    const toggle = el("button", { type: "button", className: "look-toggle", text: "Look", "aria-expanded": "false", "aria-controls": "look-panel" });
-    const panel = el("div", { className: "look-panel", id: "look-panel", hidden: "hidden" });
+    const toggle = el("button", { type: "button", className: "look-toggle", text: "Choose a look", "aria-expanded": "true", "aria-controls": "look-panel" });
+    const panel = el("div", { className: "look-panel", id: "look-panel" });
     const head = el("div", { className: "look-head" }, [
       el("div", { className: "look-title", text: "Look" }),
       el("button", { type: "button", className: "look-close", text: "Close", "aria-label": "Close look picker" })
@@ -136,7 +148,12 @@
 
     panel.appendChild(head);
     panel.appendChild(section("Logos", [
-      logoChip("door"), logoChip("panel"), logoChip("wave"), logoChip("ccp")
+      logoChip("door"), logoChip("crest"), logoChip("lockup"),
+      logoChip("panel"), logoChip("wave"), logoChip("ccp")
+    ]));
+    panel.appendChild(section("Header", [
+      chip("nav", "pill", "Pill"),
+      chip("nav", "bar", "Full width")
     ]));
     panel.appendChild(section("Theme", [
       chip("theme", "light", "Light"),
@@ -165,15 +182,29 @@
     resetBtn.addEventListener("click", reset);
     panel.appendChild(resetBtn);
 
+    const buy = el("a", {
+      className: "look-buy",
+      href: "contact.html",
+      text: "Buy this site · $2,500"
+    });
+    const note = el("p", {
+      className: "look-buy-note",
+      text: "Site Sprint. Chris and Brandon keep the look you pick."
+    });
+    panel.appendChild(buy);
+    panel.appendChild(note);
+
     function open() {
       panel.removeAttribute("hidden");
       root.classList.add("is-open");
       toggle.setAttribute("aria-expanded", "true");
+      toggle.textContent = "Choose a look";
     }
     function close() {
       panel.setAttribute("hidden", "hidden");
       root.classList.remove("is-open");
       toggle.setAttribute("aria-expanded", "false");
+      toggle.textContent = "Choose a look";
     }
     toggle.addEventListener("click", function () {
       if (root.classList.contains("is-open")) close();
@@ -188,6 +219,7 @@
     root.appendChild(toggle);
     document.body.appendChild(root);
     syncActive();
+    open();
   }
 
   apply(false);

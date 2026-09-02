@@ -76,6 +76,21 @@ img { max-width: 100%; display: block; }
   color: var(--fg);
 }
 .mark img { width: auto; height: 22px; max-height: 22px; max-width: 44px; object-fit: contain; }
+
+.mark.mark-wordmark { font-size: 0; gap: 0; }
+.mark.mark-wordmark img { height: 28px; width: auto; max-width: 9rem; max-height: none; }
+
+html[data-nav="bar"] .nav {
+  left: 0;
+  right: 0;
+  top: 0;
+  transform: none;
+  width: 100%;
+  border-radius: 0;
+  justify-content: space-between;
+  padding-inline: var(--shell-px);
+}
+
 .nav-links { display: flex; gap: 1.05rem; }
 .nav-links a {
   font-size: 11px;
@@ -655,30 +670,28 @@ html[data-layout="minimalist"] .page-hero { padding-top: calc(5.5rem + 2vw); }
 }
 .look-toggle {
   appearance: none;
-  border: 1px solid color-mix(in srgb, var(--p-fg) 12%, transparent);
-  background: color-mix(in srgb, var(--p-bg) 82%, transparent);
-  color: var(--p-fg);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  border: 0;
+  background: var(--p-fg);
+  color: var(--p-ondark);
   border-radius: 999px;
-  padding: 0.55rem 0.95rem;
+  padding: 0.7rem 1.15rem;
   font-family: Archivo, sans-serif;
   font-size: 12px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 8px 28px rgba(22, 19, 16, 0.12);
+  box-shadow: 0 10px 32px rgba(22, 19, 16, 0.28), 0 2px 8px rgba(22, 19, 16, 0.16);
 }
 html[data-theme="dark"] .look-toggle {
-  background: color-mix(in srgb, var(--p-dark) 82%, transparent);
-  color: var(--p-ondark);
-  border-color: color-mix(in srgb, var(--p-ondark) 14%, transparent);
+  background: var(--p-ondark);
+  color: var(--p-fg);
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.28);
 }
 .look-panel {
   position: absolute;
   right: 0;
-  bottom: 3.2rem;
+  bottom: 3.8rem;
   width: min(22.5rem, calc(100vw - 2rem));
   max-height: min(78vh, 40rem);
   overflow: auto;
@@ -781,6 +794,36 @@ html[data-theme="dark"] .look-logo.is-active {
   font-size: 12px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+.look-buy {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-top: 0.55rem;
+  padding: 0.7rem 1.15rem;
+  border-radius: 999px;
+  background: var(--p-fg);
+  color: var(--p-ondark);
+  text-decoration: none;
+  font-family: Archivo, sans-serif;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 600;
+  box-shadow: 0 8px 24px rgba(22, 19, 16, 0.2);
+}
+html[data-theme="dark"] .look-buy {
+  background: var(--p-ondark);
+  color: var(--p-fg);
+}
+.look-buy-note {
+  margin: 0.55rem 0 0;
+  font-size: 11px;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+  opacity: 0.55;
+  text-align: center;
 }
 @media (max-width: 768px) {
   .look-picker {
