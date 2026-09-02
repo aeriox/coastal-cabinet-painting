@@ -6,10 +6,15 @@
     font: "archivo",
     palette: "cream",
     logo: "door",
+    logoVariant: "",
     nav: "pill"
   };
   const LOGOS = {
     door: { src: "assets/mark.svg", label: "Door" },
+    panels: { label: "Panels", variants: { color: "assets/logo-opts/canva-panels-color.png" }, wordmark: true },
+    sprayer: { label: "Sprayer", variants: { color: "assets/logo-opts/canva-sprayer-color.png", dark: "assets/logo-opts/canva-sprayer-dark.png" }, wordmark: true },
+    palm: { label: "Palm", variants: { light: "assets/logo-opts/canva-palm-light.png", dark: "assets/logo-opts/canva-palm-dark.png" }, wordmark: true },
+    square: { label: "Square", variants: { light: "assets/logo-opts/canva-square-light.png" }, wordmark: true },
     crest: { src: "assets/logo-opts/nano-1.png", label: "Crest" },
     lockup: { src: "assets/logo-opts/nano-2.png", label: "Lockup" },
     panel: { src: "assets/logo-opts/opt-1.png", label: "Panel" },
@@ -17,6 +22,12 @@
     ccp: { src: "assets/logo-opts/opt-3.png", label: "CCP" }
   };
   const WORDMARK = { crest: true, lockup: true };
+  const LOGO_ORDER = ["door", "panels", "sprayer", "palm", "square", "crest", "lockup", "panel", "wave", "ccp"];
+  const FINISHES = [
+    { val: "light", label: "Light" },
+    { val: "dark", label: "Dark" },
+    { val: "color", label: "Color" }
+  ];
 
   const state = load();
 
@@ -40,9 +51,54 @@
         font: state.font,
         palette: state.palette,
         logo: state.logo,
+        logoVariant: state.logoVariant || "",
         nav: state.nav
       }));
     } catch (e) {}
+  }
+
+  function currentMeta() {
+    return LOGOS[state.logo] || LOGOS.door;
+  }
+
+  function firstVariantSrc(variants) {
+    if (!variants) return "";
+    const keys = Object.keys(variants);
+    return keys.length ? variants[keys[0]] : "";
+  }
+
+  function autoVariantKey(meta) {
+    const v = meta && meta.variants;
+    if (!v) return "";
+    if (state.theme === "dark" && v.dark) return "dark";
+    if (v.light) return "light";
+    if (v.color) return "color";
+    const keys = Object.keys(v);
+    return keys.length ? keys[0] : "";
+  }
+
+  function logoSrc() {
+    const meta = currentMeta();
+    if (meta.variants) {
+      const v = meta.variants;
+      if (state.logoVariant && v[state.logoVariant]) return v[state.logoVariant];
+      if (state.theme === "dark" && v.dark) return v.dark;
+      return v.light || v.color || firstVariantSrc(v);
+    }
+    if (meta.src) return meta.src;
+    return LOGOS.door.src;
+  }
+
+  function thumbSrc(meta) {
+    if (meta.variants) {
+      const v = meta.variants;
+      return v.color || v.light || v.dark || firstVariantSrc(v);
+    }
+    return meta.src;
+  }
+
+  function isWordmark(id, meta) {
+    return !!(meta && meta.wordmark) || !!WORDMARK[id];
   }
 
   function apply(write) {
@@ -52,12 +108,16 @@
     html.setAttribute("data-font", state.font || DEFAULTS.font);
     html.setAttribute("data-palette", state.palette || DEFAULTS.palette);
     html.setAttribute("data-nav", state.nav || DEFAULTS.nav);
-    const src = (LOGOS[state.logo] || LOGOS.door).src;
+    const id = state.logo;
+    const meta = currentMeta();
+    const src = logoSrc();
+    const word = isWordmark(id, meta);
     document.querySelectorAll(".mark img").forEach(function (img) {
       img.src = src;
     });
     document.querySelectorAll("a.mark").forEach(function (a) {
-      a.classList.remove("mark-wordmark");
+      if (word) a.classList.add("mark-wordmark");
+      else a.classList.remove("mark-wordmark");
       for (var i = 0; i < a.childNodes.length; i++) {
         var node = a.childNodes[i];
         if (node.nodeType === 3 && node.textContent.trim()) {
@@ -70,6 +130,12 @@
   }
 
   function set(key, value) {
+    if (key === "logo") {
+      const next = LOGOS[value] || LOGOS.door;
+      if (!next.variants || !state.logoVariant || !next.variants[state.logoVariant]) {
+        state.logoVariant = "";
+      }
+    }
     state[key] = value;
     apply(true);
   }
@@ -81,14 +147,26 @@
     state.font = DEFAULTS.font;
     state.palette = DEFAULTS.palette;
     state.logo = DEFAULTS.logo;
+    state.logoVariant = "";
     state.nav = DEFAULTS.nav;
     apply(false);
   }
 
   function syncActive() {
+    const meta = currentMeta();
+    const autoKey = autoVariantKey(meta);
     document.querySelectorAll("[data-look-key]").forEach(function (btn) {
       const key = btn.getAttribute("data-look-key");
       const val = btn.getAttribute("data-look-val");
+      if (key === "logoVariant") {
+        const has = !!(meta.variants && meta.variants[val]);
+        btn.classList.toggle("is-disabled", !has);
+        if (!has) btn.setAttribute("aria-disabled", "true");
+        else btn.removeAttribute("aria-disabled");
+        const chosen = state.logoVariant || autoKey;
+        btn.classList.toggle("is-active", has && chosen === val && (state.logoVariant === val || (!state.logoVariant && autoKey === val)));
+        return;
+      }
       btn.classList.toggle("is-active", state[key] === val);
     });
   }
@@ -121,14 +199,16 @@
 
   function logoChip(id) {
     const meta = LOGOS[id];
+    const src = thumbSrc(meta);
+    const usesDark = !!(meta.variants && src === meta.variants.dark);
     const b = el("button", {
       type: "button",
-      className: "look-logo",
+      className: "look-logo" + (usesDark ? " look-logo-on-dark is-on-dark" : ""),
       "data-look-key": "logo",
       "data-look-val": id,
       title: meta.label
     });
-    const img = el("img", { src: meta.src, alt: meta.label });
+    const img = el("img", { src: src, alt: meta.label });
     b.appendChild(img);
     b.appendChild(el("span", { text: meta.label }));
     b.addEventListener("click", function () { set("logo", id); });
@@ -152,10 +232,10 @@
     ]);
 
     panel.appendChild(head);
-    panel.appendChild(section("Logos", [
-      logoChip("door"), logoChip("crest"), logoChip("lockup"),
-      logoChip("panel"), logoChip("wave"), logoChip("ccp")
-    ]));
+    panel.appendChild(section("Logos", LOGO_ORDER.map(logoChip)));
+    panel.appendChild(section("Logo finish", FINISHES.map(function (f) {
+      return chip("logoVariant", f.val, f.label);
+    })));
     panel.appendChild(section("Header", [
       chip("nav", "pill", "Pill"),
       chip("nav", "bar", "Full width")

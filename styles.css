@@ -80,7 +80,7 @@ img { max-width: 100%; display: block; }
 .mark img { width: auto; height: 22px; max-height: 22px; max-width: 44px; object-fit: contain; }
 
 .mark.mark-wordmark { font-size: 0; gap: 0; }
-.mark.mark-wordmark img { height: 28px; width: auto; max-width: 9rem; max-height: none; }
+.mark.mark-wordmark img { height: 36px; width: auto; max-width: 14rem; max-height: none; }
 
 html[data-nav="bar"] .nav {
   left: 0;
@@ -801,9 +801,18 @@ html[data-theme="dark"] .look-panel {
   font-size: 12px;
 }
 .look-logo img {
-  width: 28px;
-  height: 28px;
+  width: 72px;
+  height: 40px;
   object-fit: contain;
+}
+.look-logo.is-on-dark,
+.look-logo.look-logo-on-dark {
+  background: #1c1814;
+  color: #f3eee6;
+}
+.look-chip.is-disabled {
+  opacity: 0.35;
+  pointer-events: none;
 }
 .look-chip.is-active,
 .look-logo.is-active {
