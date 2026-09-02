@@ -363,6 +363,14 @@ footer.site {
   color: var(--muted);
   border-top: 1px solid var(--line);
 }
+footer.site a {
+  color: var(--fg);
+  text-decoration: none;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+footer.site a:hover { opacity: 0.6; }
 
 .reveal {
   opacity: 0;
