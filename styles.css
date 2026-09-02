@@ -601,20 +601,11 @@ html[data-layout="minimalist"] body { font-size: 16px; }
 html[data-layout="minimalist"] h1 { font-size: clamp(2.4rem, 6vw, 4.6rem); letter-spacing: 0; }
 html[data-layout="minimalist"] h2 { font-size: clamp(1.5rem, 3vw, 2.2rem); }
 html[data-layout="minimalist"] .nav {
-  top: 0;
-  left: 0;
-  right: 0;
-  transform: none;
-  width: 100%;
-  border-radius: 0;
   background: var(--bg);
-  border: 0;
-  border-bottom: 1px solid var(--line);
+  border-color: var(--line);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   box-shadow: none;
-  padding: 0.7rem var(--shell-px);
-  justify-content: space-between;
 }
 html[data-layout="minimalist"] .nav-cta { border-radius: 0.35rem; }
 html[data-layout="minimalist"] .cta { border-radius: 0.35rem; }
@@ -656,7 +647,31 @@ html[data-layout="minimalist"] .page-hero { padding-top: calc(5.5rem + 2vw); }
   html[data-layout="magazine"] .gallery,
   html[data-layout="magazine"] .steps { grid-template-columns: 1fr; }
   html[data-layout="magazine"] .step:nth-child(odd) { border-right: 0; }
-  html[data-layout="minimalist"] .nav { width: 100%; }
+  html[data-layout="minimalist"][data-nav="bar"] .nav { width: 100%; }
+}
+
+/* header width: pill vs full. Wins over layout. */
+html[data-nav="pill"] .nav {
+  top: 1.15rem;
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+  width: auto;
+  max-width: calc(100% - 1.6rem);
+  border-radius: 999px;
+  justify-content: flex-start;
+  padding: 0.55rem 0.55rem 0.55rem 1.15rem;
+}
+html[data-nav="bar"] .nav {
+  left: 0;
+  right: 0;
+  top: 0;
+  transform: none;
+  width: 100%;
+  max-width: none;
+  border-radius: 0;
+  justify-content: space-between;
+  padding-inline: var(--shell-px);
 }
 
 /* picker */
