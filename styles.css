@@ -521,6 +521,10 @@ html[data-layout="editorial"] .hero-copy {
   right: auto;
   padding-bottom: 4.2rem;
 }
+html[data-layout="editorial"][data-nav="bar"] .hero-copy {
+  max-height: calc(100dvh - 5.6rem);
+  padding-top: 0.35rem;
+}
 html[data-layout="editorial"] .hero-copy h1,
 html[data-layout="editorial"] .hero-copy .lede { max-width: none; }
 html[data-layout="editorial"] .gallery {
