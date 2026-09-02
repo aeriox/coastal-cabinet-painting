@@ -265,11 +265,11 @@
     const buy = el("a", {
       className: "look-buy",
       href: "contact.html",
-      text: "Buy this site · $2,500"
+      text: "Buy this site · $1,400"
     });
     const note = el("p", {
       className: "look-buy-note",
-      text: "Site Sprint. Chris and Brandon keep the look you pick."
+      text: "$1,400. First year of hosting included. They keep the look they pick."
     });
     panel.appendChild(buy);
     panel.appendChild(note);
