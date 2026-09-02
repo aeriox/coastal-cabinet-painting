@@ -522,8 +522,15 @@ html[data-layout="editorial"] .hero-copy {
   padding-bottom: 4.2rem;
 }
 html[data-layout="editorial"][data-nav="bar"] .hero-copy {
-  max-height: calc(100dvh - 5.6rem);
-  padding-top: 0.35rem;
+  top: 4.75rem;
+  bottom: 0;
+  max-height: none;
+  padding-top: 0.9rem;
+  display: flex;
+  flex-direction: column;
+}
+html[data-layout="editorial"][data-nav="bar"] .hero-copy .cta {
+  margin-top: auto;
 }
 html[data-layout="editorial"] .hero-copy h1,
 html[data-layout="editorial"] .hero-copy .lede { max-width: none; }
