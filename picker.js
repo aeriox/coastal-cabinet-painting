@@ -10,13 +10,14 @@
     nav: "pill"
   };
   const LOGOS = {
+    lighthouse: { label: "Lighthouse", wordmark: true, variants: { light: "assets/logo-opts/fb-lighthouse.png", dark: "assets/logo-opts/fb-lighthouse.png" } },
     box: { label: "Box", wordmark: true, variants: { color: "assets/logo-opts/canva-box-color.png", light: "assets/logo-opts/canva-box-dark.png", dark: "assets/logo-opts/canva-box-light.png" } },
     panels: { label: "Panels", wordmark: true, variants: { light: "assets/logo-opts/canva-panels-dark.png", dark: "assets/logo-opts/canva-panels-light.png" } },
     crest: { label: "Crest", wordmark: true, variants: { light: "assets/logo-opts/canva-crest-dark.png", dark: "assets/logo-opts/canva-crest-light.png" } },
     sprayer: { label: "Sprayer", wordmark: true, variants: { light: "assets/logo-opts/canva-sprayer-dark.png", dark: "assets/logo-opts/canva-sprayer-color.png" } }
   };
   const WORDMARK = {};
-  const LOGO_ORDER = ["box", "panels", "crest", "sprayer"];
+  const LOGO_ORDER = ["lighthouse", "box", "panels", "crest", "sprayer"];
   const FINISHES = [];
 
   const state = load();
