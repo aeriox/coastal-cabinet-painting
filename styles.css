@@ -901,3 +901,64 @@ html[data-theme="dark"] .look-buy {
   border-radius: 999px; background: #f3eee6; color: #161310;
   text-decoration: none; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
 }
+
+
+/* sticky thumb call — mobile; buy band shifts up */
+.sticky-call { display: none; }
+@media (max-width: 768px) {
+  .sticky-call {
+    display: flex;
+    position: fixed;
+    left: 0; right: 0;
+    bottom: 0;
+    z-index: 40;
+    align-items: center;
+    justify-content: center;
+    gap: 0.7rem;
+    min-height: 3.35rem;
+    padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
+    background: #161310;
+    color: #f3eee6;
+    text-decoration: none;
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border-top: 1px solid rgba(243,238,230,0.14);
+    box-shadow: 0 -8px 28px rgba(22, 19, 16, 0.28);
+  }
+  .sticky-call-num {
+    opacity: 0.88;
+    letter-spacing: 0.02em;
+    text-transform: none;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+  }
+  .offer {
+    bottom: calc(4.1rem + env(safe-area-inset-bottom, 0px));
+  }
+  body:has(.look-picker.is-open) .sticky-call { display: none !important; }
+  body:has(.look-picker.is-open) .offer { display: none; }
+  body { padding-bottom: calc(7.8rem + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* hide buy when look-picker open (desktop + mobile) */
+body:has(.look-picker.is-open) .offer { display: none; }
+.look-picker { bottom: 5.2rem; z-index: 70; }
+@media (max-width: 768px) {
+  .look-picker { bottom: calc(4.1rem + env(safe-area-inset-bottom, 0px)); }
+  body:has(.look-picker.is-open) .look-picker { bottom: 0; }
+}
+
+/* buy chrome polish — Coastal $1400 */
+.offer {
+  gap: 0.85rem;
+  padding: 0.85rem 1rem;
+}
+.offer-btn {
+  padding: 0.6rem 1.1rem;
+  min-height: 2.5rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
