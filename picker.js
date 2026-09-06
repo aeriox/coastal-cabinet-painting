@@ -265,12 +265,14 @@
 
     const buy = el("a", {
       className: "look-buy",
-      href: "contact.html",
+      href: "https://buy.stripe.com/7sY14n9KA6Kve4UeB26sw07",
+      target: "_blank",
+      rel: "noopener",
       text: "Buy this site · $1,400"
     });
     const note = el("p", {
       className: "look-buy-note",
-      text: "$1,400. First year of hosting included. They keep the look they pick."
+      text: "Live Stripe Checkout · $1,400. First year of hosting included. They keep the look they pick."
     });
     panel.appendChild(buy);
     panel.appendChild(note);
