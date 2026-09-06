@@ -11,9 +11,9 @@
   };
   const LOGOS = {
     lighthouse: { label: "Lighthouse", wordmark: true, variants: { light: "assets/logo-opts/fb-lighthouse.png", dark: "assets/logo-opts/fb-lighthouse.png" } },
-    box: { label: "Box", wordmark: true, variants: { color: "assets/logo-opts/canva-box-color.png", light: "assets/logo-opts/canva-box-dark.png", dark: "assets/logo-opts/canva-box-light.png" } },
-    panels: { label: "Panels", wordmark: true, variants: { light: "assets/logo-opts/canva-panels-dark.png", dark: "assets/logo-opts/canva-panels-light.png" } },
-    crest: { label: "Crest", wordmark: true, variants: { light: "assets/logo-opts/canva-crest-dark.png", dark: "assets/logo-opts/canva-crest-light.png" } },
+    box: { label: "Box", wordmark: true, variants: { color: "assets/logo-opts/canva-box-color.png", light: "assets/logo-opts/canva-box-light.png", dark: "assets/logo-opts/canva-box-dark.png" } },
+    panels: { label: "Panels", wordmark: true, variants: { light: "assets/logo-opts/canva-panels-light.png", dark: "assets/logo-opts/canva-panels-dark.png" } },
+    crest: { label: "Crest", wordmark: true, variants: { light: "assets/logo-opts/canva-crest-light.png", dark: "assets/logo-opts/canva-crest-dark.png" } },
     sprayer: { label: "Sprayer", wordmark: true, variants: { light: "assets/logo-opts/canva-sprayer-dark.png", dark: "assets/logo-opts/canva-sprayer-color.png" } }
   };
   const WORDMARK = {};
