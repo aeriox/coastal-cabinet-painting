@@ -54,7 +54,7 @@ img { max-width: 100%; display: block; }
   display: flex;
   align-items: center;
   gap: 1.4rem;
-  padding: 0.55rem 0.55rem 0.55rem 1.15rem;
+  padding: 0.65rem 0.55rem 0.65rem 1.15rem;
   border-radius: 999px;
   background: rgba(243, 238, 230, 0.72);
   border: 1px solid rgba(28, 24, 20, 0.08);
@@ -80,7 +80,16 @@ img { max-width: 100%; display: block; }
 .mark img { width: auto; height: 22px; max-height: 22px; max-width: 44px; object-fit: contain; }
 
 .mark.mark-wordmark { font-size: 0; gap: 0; max-width: 16rem; }
-.mark.mark-wordmark img { height: 40px; width: auto; max-width: 16rem; max-height: none; object-fit: contain; }
+.mark.mark-wordmark img {
+  height: 52px; /* was 40px */
+  width: auto;
+  max-width: 16rem;
+  max-height: none;
+  object-fit: contain;
+}
+@media (max-width: 768px) {
+  .mark.mark-wordmark img { height: 44px; }
+}
 
 html[data-nav="bar"] .nav {
   left: 0;
@@ -673,7 +682,7 @@ html[data-nav="pill"] .nav {
   max-width: calc(100% - 1.6rem);
   border-radius: 999px;
   justify-content: flex-start;
-  padding: 0.55rem 0.55rem 0.55rem 1.15rem;
+  padding: 0.65rem 0.55rem 0.65rem 1.15rem;
 }
 html[data-nav="bar"] .nav {
   left: 0;
