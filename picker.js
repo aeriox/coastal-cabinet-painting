@@ -10,7 +10,7 @@
     nav: "pill"
   };
   const LOGOS = {
-    lighthouse: { label: "Lighthouse", wordmark: true, variants: { light: "assets/logo-opts/fb-lighthouse.png", dark: "assets/logo-opts/fb-lighthouse.png" } },
+    lighthouse: { label: "Lighthouse", wordmark: false, thumb: "assets/logo-opts/fb-lighthouse.png", variants: { light: "assets/logo-opts/lighthouse-light.png", dark: "assets/logo-opts/lighthouse-dark.png" } },
     box: { label: "Box", wordmark: true, variants: { color: "assets/logo-opts/canva-box-color.png", light: "assets/logo-opts/canva-box-light.png", dark: "assets/logo-opts/canva-box-dark.png" } },
     panels: { label: "Panels", wordmark: true, variants: { light: "assets/logo-opts/canva-panels-light.png", dark: "assets/logo-opts/canva-panels-dark.png" } },
     crest: { label: "Crest", wordmark: true, variants: { light: "assets/logo-opts/canva-crest-light.png", dark: "assets/logo-opts/canva-crest-dark.png" } },
@@ -82,6 +82,7 @@
   }
 
   function thumbSrc(meta) {
+    if (meta.thumb) return meta.thumb;
     if (meta.variants) {
       const v = meta.variants;
       return v.color || v.light || v.dark || firstVariantSrc(v);
