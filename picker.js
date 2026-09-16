@@ -10,7 +10,7 @@
     nav: "pill"
   };
   const LOGOS = {
-    lighthouse: { label: "Lighthouse", wordmark: false, thumb: "assets/logo-opts/fb-lighthouse.png", variants: { light: "assets/logo-opts/lighthouse-light.png", dark: "assets/logo-opts/lighthouse-dark.png" } },
+    lighthouse: { label: "Lighthouse", wordmark: true, thumb: "assets/logo-opts/fb-lighthouse.png", variants: { light: "assets/logo-opts/lighthouse-light.png", dark: "assets/logo-opts/lighthouse-dark.png" } },
     box: { label: "Box", wordmark: true, variants: { color: "assets/logo-opts/canva-box-color.png", light: "assets/logo-opts/canva-box-light.png", dark: "assets/logo-opts/canva-box-dark.png" } },
     panels: { label: "Panels", wordmark: true, variants: { light: "assets/logo-opts/canva-panels-light.png", dark: "assets/logo-opts/canva-panels-dark.png" } },
     crest: { label: "Crest", wordmark: true, variants: { light: "assets/logo-opts/canva-crest-light.png", dark: "assets/logo-opts/canva-crest-dark.png" } },
@@ -101,6 +101,7 @@
     html.setAttribute("data-font", state.font || DEFAULTS.font);
     html.setAttribute("data-palette", state.palette || DEFAULTS.palette);
     html.setAttribute("data-nav", state.nav || DEFAULTS.nav);
+    html.setAttribute("data-logo", state.logo || DEFAULTS.logo);
     const id = state.logo;
     const meta = currentMeta();
     const src = logoSrc();
@@ -109,6 +110,8 @@
       img.src = src;
     });
     document.querySelectorAll("a.mark").forEach(function (a) {
+      a.className = a.className.replace(/\bmark-logo-\S+/g, "").replace(/\s+/g, " ").trim();
+      a.classList.add("mark-logo-" + id);
       if (word) a.classList.add("mark-wordmark");
       else a.classList.remove("mark-wordmark");
       for (var i = 0; i < a.childNodes.length; i++) {

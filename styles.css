@@ -91,6 +91,18 @@ img { max-width: 100%; display: block; }
   .mark.mark-wordmark img { height: 44px; }
 }
 
+/* Lighthouse stacked brush lockup — taller than global wordmark */
+.mark.mark-wordmark.mark-logo-lighthouse {
+  max-width: 13rem;
+}
+.mark.mark-wordmark.mark-logo-lighthouse img {
+  height: 64px;
+  max-width: 13rem;
+}
+@media (max-width: 768px) {
+  .mark.mark-wordmark.mark-logo-lighthouse img { height: 56px; }
+}
+
 html[data-nav="bar"] .nav {
   left: 0;
   right: 0;
