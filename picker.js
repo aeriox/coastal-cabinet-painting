@@ -224,7 +224,7 @@
 
   function build() {
     const root = el("div", { className: "look-picker", id: "look-picker" });
-    const toggle = el("button", { type: "button", className: "look-toggle", text: "Choose a look", "aria-expanded": "true", "aria-controls": "look-panel" });
+    const toggle = el("button", { type: "button", className: "look-toggle", text: "Choose a look", "aria-expanded": "false", "aria-controls": "look-panel" });
     const panel = el("div", { className: "look-panel", id: "look-panel" });
     const head = el("div", { className: "look-head" }, [
       el("div", { className: "look-title", text: "Look" }),
@@ -306,7 +306,7 @@
     root.appendChild(toggle);
     document.body.appendChild(root);
     syncActive();
-    open();
+    close();
   }
 
   apply(false);
