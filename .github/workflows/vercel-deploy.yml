@@ -1,0 +1,60 @@
+# Deploys to Vercel from GitHub Actions with the AERIOX team token, so pushes
+# from collaborators outside the Vercel team still deploy. Vercel's own Git
+# integration is disabled in vercel.json (git.deploymentEnabled: false).
+#   main          -> production
+#   other branch  -> preview (URL in the run summary and on the open PR)
+name: Vercel deploy
+
+on:
+  push:
+  workflow_dispatch:
+
+concurrency:
+  group: vercel-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+  VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - run: npm install --global vercel@latest
+
+      - name: Build and deploy
+        id: deploy
+        run: |
+          if [ "$GITHUB_REF" = "refs/heads/main" ]; then
+            target=production; prod=--prod
+          else
+            target=preview; prod=
+          fi
+          vercel pull --yes --environment=$target --token="$VERCEL_TOKEN"
+          vercel build $prod --token="$VERCEL_TOKEN"
+          url=$(vercel deploy --prebuilt $prod --token="$VERCEL_TOKEN")
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "### Deployed ($target): $url" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Post preview URL on the PR
+        if: github.ref != 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          URL: ${{ steps.deploy.outputs.url }}
+        run: |
+          pr=$(gh pr list --head "$GITHUB_REF_NAME" --json number --jq '.[0].number')
+          if [ -n "$pr" ]; then
+            gh pr comment "$pr" --body "Preview for ${GITHUB_SHA::7}: $URL"
+          fi
