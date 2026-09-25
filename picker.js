@@ -267,19 +267,6 @@
     resetBtn.addEventListener("click", reset);
     panel.appendChild(resetBtn);
 
-    const buy = el("a", {
-      className: "look-buy",
-      href: "https://buy.stripe.com/00weVd0a01qb7Gw1Og6sw08",
-      target: "_blank",
-      rel: "noopener",
-      text: "Buy this site · $750"
-    });
-    const note = el("p", {
-      className: "look-buy-note",
-      text: "Live Stripe Checkout · $750. Year hosting included, then $20/mo. They keep the look they pick."
-    });
-    panel.appendChild(buy);
-    panel.appendChild(note);
 
     function open() {
       panel.removeAttribute("hidden");
