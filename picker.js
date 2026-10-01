@@ -94,6 +94,133 @@
     return !!(meta && meta.wordmark) || !!WORDMARK[id];
   }
 
+  /* ---------------- a pick restyles the page where the visitor is ----------------
+     Joshua (2026-10-01): a pick has to restyle the page wherever he is scrolled to. A layout, preset,
+     type or logo pick changes heights above and around the screen, and browsers keep the place their
+     own way (Safari not at all), so the reading line, a third of the way down the screen under the
+     site's header, holds still while the new look, its fonts and its logo settle: the deepest steady
+     element across that line (not fixed, sticky or moved by a transform, which would chase the scroll)
+     keeps the same part of itself on the line, however much it grows or shrinks, with the browser's own
+     scroll anchoring and smooth scrolling off for the hold. A wheel, touch, press or key outside the
+     panel lets go at once. */
+  var held = null;
+  var INTENT = ["wheel", "touchstart", "pointerdown", "keydown"];
+  function scrollTopNow() { return window.scrollY || window.pageYOffset || 0; }
+  function scrollToY(y) {
+    var x = window.scrollX || window.pageXOffset || 0;
+    try { window.scrollTo({ top: y, left: x, behavior: "instant" }); } catch (e) { window.scrollTo(x, y); }
+  }
+  function steady(node) {
+    var cs = getComputedStyle(node);
+    return cs.position !== "fixed" && cs.position !== "sticky" && (cs.transform === "none" || cs.transform === "matrix(1, 0, 0, 1, 0, 0)");
+  }
+  function pinned(node) {
+    for (var p = node; p && p !== document.body; p = p.parentElement) {
+      var pos = getComputedStyle(p).position;
+      if (pos === "fixed" || pos === "sticky") return true;
+    }
+    return false;
+  }
+  /* The bottom of the site's header when it stays on screen (fixed or sticky at the top). */
+  function headerBottom() {
+    var bottom = 0;
+    document.querySelectorAll("header, nav, [role=banner]").forEach(function (h) {
+      if (h.closest("#look-picker") || !pinned(h)) return;
+      var r = h.getBoundingClientRect();
+      if (r.top <= 1 && r.bottom > 0 && r.bottom < innerHeight * .4) bottom = Math.max(bottom, r.bottom);
+    });
+    return bottom;
+  }
+  /* Walked down from <body>, not hit-tested: the panel can sit over the line. */
+  function lineAt(y) {
+    var node = document.body, found = null;
+    for (;;) {
+      var kids = Array.prototype.slice.call(node.children), next = null;
+      for (var i = 0; i < kids.length && !next; i++) {
+        var k = kids[i], r = k.getBoundingClientRect();
+        if (!r.height && !r.width) {
+          if (getComputedStyle(k).display === "contents") kids.splice.apply(kids, [i + 1, 0].concat(Array.prototype.slice.call(k.children)));
+          continue;
+        }
+        if (r.top <= y && r.bottom > y && steady(k)) next = k;
+      }
+      if (!next) return found;
+      found = node = next;
+    }
+  }
+  function onIntent(e) {
+    var picker = document.getElementById("look-picker");
+    if (!(picker && e.target && e.target.nodeType === 1 && picker.contains(e.target))) letGo();
+  }
+  function letGo() {
+    if (!held) return;
+    cancelAnimationFrame(held.raf);
+    INTENT.forEach(function (t) { window.removeEventListener(t, onIntent, true); });
+    var html = document.documentElement;
+    html.style.overflowAnchor = held.anchor;
+    html.style.scrollBehavior = held.behavior;
+    held = null;
+  }
+  /* At the very top the page stays at the top. Otherwise the element across the reading line and each
+     box around it remember where the line crosses them; the deepest one still on the page keeps that. */
+  function holdPlace() {
+    letGo();
+    if (scrollTopNow() < 1) return;
+    var top = Math.min(headerBottom(), innerHeight * .5), line = top + (innerHeight - top) * .3;
+    var chain = [];
+    for (var n = lineAt(line); n && n !== document.body; n = n.parentElement) {
+      var r = n.getBoundingClientRect();
+      chain.push({ el: n, at: r.height ? (line - r.top) / r.height : 0 });
+    }
+    if (!chain.length) return;
+    var html = document.documentElement;
+    held = { chain: chain, line: line, raf: 0, anchor: html.style.overflowAnchor, behavior: html.style.scrollBehavior };
+    html.style.overflowAnchor = "none";
+    html.style.scrollBehavior = "auto";
+    INTENT.forEach(function (t) { window.addEventListener(t, onIntent, { capture: true, passive: true }); });
+  }
+  function keepPlace() {
+    if (!held) return;
+    for (var i = 0; i < held.chain.length; i++) {
+      var c = held.chain[i];
+      if (!document.contains(c.el)) continue;
+      var r = c.el.getBoundingClientRect();
+      if (!r.height && !r.width) continue;
+      var d = r.top - (held.line - c.at * r.height);
+      if (Math.abs(d) >= 1) scrollToY(scrollTopNow() + d);
+      return;
+    }
+    letGo();
+  }
+  /* Held for 1.2 s at least, and until the fonts and the new logo are in (4 s at most). */
+  function settle() {
+    var h = held;
+    if (!h) return;
+    keepPlace();   /* before the fonts are read: this layout is what starts a new face loading */
+    var start = Date.now(), done = false, loads = [];
+    document.querySelectorAll(".mark img").forEach(function (img) {
+      if (!img.complete) loads.push(new Promise(function (r) { img.addEventListener("load", r, { once: true }); img.addEventListener("error", r, { once: true }); }));
+    });
+    if (document.fonts && document.fonts.ready) loads.push(document.fonts.ready);
+    Promise.race([Promise.all(loads), new Promise(function (r) { setTimeout(r, 4000); })])
+      .then(function () { return new Promise(function (r) { setTimeout(r, 300); }); })
+      .then(function () { done = true; });
+    function tick() {
+      if (held !== h) return;
+      keepPlace();
+      if (held !== h) return;
+      if (done && Date.now() - start >= 1200) { letGo(); return; }
+      h.raf = requestAnimationFrame(tick);
+    }
+    h.raf = requestAnimationFrame(tick);
+  }
+  /* A pick from the panel: restyle, holding the visitor's place. */
+  function restyle(write) {
+    holdPlace();
+    apply(write);
+    settle();
+  }
+
   function apply(write) {
     const html = document.documentElement;
     html.setAttribute("data-layout", state.layout || DEFAULTS.layout);
@@ -134,11 +261,11 @@
     }
     if (key === "logoVariant" && state.logoVariant === value) {
       state.logoVariant = "";
-      apply(true);
+      restyle(true);
       return;
     }
     state[key] = value;
-    apply(true);
+    restyle(true);
   }
 
   function reset() {
@@ -150,7 +277,7 @@
     state.logo = DEFAULTS.logo;
     state.logoVariant = "";
     state.nav = DEFAULTS.nav;
-    apply(false);
+    restyle(false);
   }
 
   function syncActive() {
