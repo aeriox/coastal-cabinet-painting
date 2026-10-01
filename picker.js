@@ -95,14 +95,15 @@
   }
 
   /* ---------------- a pick restyles the page where the visitor is ----------------
-     Joshua (2026-10-01): a pick has to restyle the page wherever he is scrolled to. A layout, preset,
-     type or logo pick changes heights above and around the screen, and browsers keep the place their
-     own way (Safari not at all), so the reading line, a third of the way down the screen under the
-     site's header, holds still while the new look, its fonts and its logo settle: the deepest steady
-     element across that line (not fixed, sticky or moved by a transform, which would chase the scroll)
-     keeps the same part of itself on the line, however much it grows or shrinks, with the browser's own
-     scroll anchoring and smooth scrolling off for the hold. A wheel, touch, press or key outside the
-     panel lets go at once. */
+     Joshua (2026-10-01): a pick has to restyle the page wherever he is scrolled to. Nothing here scrolls
+     on a pick, but a layout, preset, type or logo pick changes heights above and around the screen, and
+     browsers keep the place their own way (Chrome's anchor slips when the layout changes, Safari keeps
+     none). So the line just under the site's header holds still while the new look, its fonts and its
+     logo settle: the deepest steady element across it (not fixed, sticky or moved by a transform, which
+     would chase the scroll) keeps its place on screen, or the nearest box around it when the new look
+     hides it. The browser's own scroll anchoring and smooth scrolling are off for the hold, and a wheel,
+     touch, press or key outside the panel lets go at once. (The same hold as the AERIOX offer engine,
+     aeriox-app#110.) */
   var held = null;
   var INTENT = ["wheel", "touchstart", "pointerdown", "keydown"];
   function scrollTopNow() { return window.scrollY || window.pageYOffset || 0; }
@@ -161,36 +162,44 @@
     html.style.scrollBehavior = held.behavior;
     held = null;
   }
-  /* At the very top the page stays at the top. Otherwise the element across the reading line and each
-     box around it remember where the line crosses them; the deepest one still on the page keeps that. */
+  /* At the very top the page stays at the top. Otherwise the first small element down the screen, or
+     the one under the header, and each box around it (for when the new look hides it). */
   function holdPlace() {
     letGo();
     if (scrollTopNow() < 1) return;
-    var top = Math.min(headerBottom(), innerHeight * .5), line = top + (innerHeight - top) * .3;
-    var chain = [];
-    for (var n = lineAt(line); n && n !== document.body; n = n.parentElement) {
-      var r = n.getBoundingClientRect();
-      chain.push({ el: n, at: r.height ? (line - r.top) / r.height : 0 });
-    }
-    if (!chain.length) return;
+    var top = Math.min(headerBottom(), innerHeight * .5), span = innerHeight - top, el = null;
+    [8, span * .25, span * .45].some(function (dy) {
+      var c = lineAt(top + dy);
+      if (c && !el) el = c;
+      if (c && c.getBoundingClientRect().height <= innerHeight * .6) { el = c; return true; }
+      return false;
+    });
+    if (!el) return;
+    var marks = [];
+    for (var n = el; n && n !== document.body; n = n.parentElement) marks.push({ el: n, top: n.getBoundingClientRect().top });
     var html = document.documentElement;
-    held = { chain: chain, line: line, raf: 0, anchor: html.style.overflowAnchor, behavior: html.style.scrollBehavior };
+    held = { marks: marks, raf: 0, anchor: html.style.overflowAnchor, behavior: html.style.scrollBehavior };
     html.style.overflowAnchor = "none";
     html.style.scrollBehavior = "auto";
     INTENT.forEach(function (t) { window.addEventListener(t, onIntent, { capture: true, passive: true }); });
   }
+  /* The first of them still on the page keeps its place. One that rides with the screen once the look
+     lands can't be held by scrolling: the page is put back and let go. */
   function keepPlace() {
     if (!held) return;
-    for (var i = 0; i < held.chain.length; i++) {
-      var c = held.chain[i];
+    var m = null, r;
+    for (var i = 0; i < held.marks.length && !m; i++) {
+      var c = held.marks[i];
       if (!document.contains(c.el)) continue;
-      var r = c.el.getBoundingClientRect();
-      if (!r.height && !r.width) continue;
-      var d = r.top - (held.line - c.at * r.height);
-      if (Math.abs(d) >= 1) scrollToY(scrollTopNow() + d);
-      return;
+      r = c.el.getBoundingClientRect();
+      if (r.width || r.height) m = c;
     }
-    letGo();
+    if (!m) { letGo(); return; }
+    var d = r.top - m.top;
+    if (Math.abs(d) < 1) return;
+    var y = scrollTopNow();
+    scrollToY(y + d);
+    if (Math.abs(scrollTopNow() - y) >= 1 && Math.abs(m.el.getBoundingClientRect().top - m.top) > Math.abs(d) - .5) { scrollToY(y); letGo(); }
   }
   /* Held for 1.2 s at least, and until the fonts and the new logo are in (4 s at most). */
   function settle() {
