@@ -98,23 +98,34 @@
      Joshua (2026-10-01): a pick has to restyle the page wherever he is scrolled to. Nothing here scrolls
      on a pick, but a layout, preset, type or logo pick changes heights above and around the screen, and
      browsers keep the place their own way (Chrome's anchor slips when the layout changes, Safari keeps
-     none). So the line just under the site's header holds still while the new look, its fonts and its
-     logo settle: the deepest steady element across it (not fixed, sticky or moved by a transform, which
-     would chase the scroll) keeps its place on screen, or the nearest box around it when the new look
-     hides it. The browser's own scroll anchoring and smooth scrolling are off for the hold, and a wheel,
-     touch, press or key outside the panel lets go at once. (The same hold as the AERIOX offer engine,
-     aeriox-app#110.) */
+     none). So the content on the line just under the site's header holds still while the new look, its
+     fonts and its logo settle. The line sits under the pinned nav, the floating pill included. The text
+     or picture on that line (inside boxes that are not fixed, sticky or moved by a transform, which would
+     chase the scroll) keeps its place on screen, or the nearest box around it when the new look hides it.
+     It is put back every frame and whenever the page resizes (a ResizeObserver, so a late change from
+     another script can't show for a frame). The browser's own scroll anchoring and smooth scrolling are
+     off for the hold, and a wheel, touch, press or key outside the panel lets go at once. (The same hold
+     as the AERIOX offer engine, aeriox-app#110.) */
   var held = null;
   var INTENT = ["wheel", "touchstart", "pointerdown", "keydown"];
+  /* Content a reader sees: text, or a picture, a video or a form field. */
+  var REPLACED = /^(img|video|canvas|svg|iframe|input|textarea|select|object|embed)$/i;
   function scrollTopNow() { return window.scrollY || window.pageYOffset || 0; }
   function scrollToY(y) {
     var x = window.scrollX || window.pageXOffset || 0;
     try { window.scrollTo({ top: y, left: x, behavior: "instant" }); } catch (e) { window.scrollTo(x, y); }
   }
-  function steady(node) {
-    var cs = getComputedStyle(node);
-    return cs.position !== "fixed" && cs.position !== "sticky" && (cs.transform === "none" || cs.transform === "matrix(1, 0, 0, 1, 0, 0)");
+  /* A box that moves only with the page: not fixed or sticky, and not shifted by a transform (or the
+     translate / scale / rotate properties), which a reveal or parallax animates on its own. */
+  function steadyStyle(cs) {
+    if (cs.position === "fixed" || cs.position === "sticky") return false;
+    if (cs.transform && cs.transform !== "none" && cs.transform !== "matrix(1, 0, 0, 1, 0, 0)") return false;
+    if (cs.translate && cs.translate !== "none" && !/^(\s*0(px|%)?)+\s*$/.test(cs.translate)) return false;
+    if (cs.scale && cs.scale !== "none" && !/^(\s*1)+\s*$/.test(cs.scale)) return false;
+    if (cs.rotate && cs.rotate !== "none" && !/^\s*0(deg|rad|turn)?\s*$/.test(cs.rotate)) return false;
+    return true;
   }
+  function steady(node) { return steadyStyle(getComputedStyle(node)); }
   function pinned(node) {
     for (var p = node; p && p !== document.body; p = p.parentElement) {
       var pos = getComputedStyle(p).position;
@@ -122,23 +133,89 @@
     }
     return false;
   }
-  /* The bottom of the site's header when it stays on screen (fixed or sticky at the top). */
+  /* The bottom of the site's header while it stays on screen: a fixed or sticky header or nav whose top is
+     near the top of the screen (the floating pill nav sits a little below the edge). */
   function headerBottom() {
-    var bottom = 0;
+    var band = Math.max(48, innerHeight * .1), bottom = 0;
     document.querySelectorAll("header, nav, [role=banner]").forEach(function (h) {
       if (h.closest("#look-picker") || !pinned(h)) return;
+      var cs = getComputedStyle(h);
+      if (cs.visibility === "hidden" || parseFloat(cs.opacity) < .1) return;
       var r = h.getBoundingClientRect();
-      if (r.top <= 1 && r.bottom > 0 && r.bottom < innerHeight * .4) bottom = Math.max(bottom, r.bottom);
+      if (r.top <= band && r.bottom > 0 && r.bottom < innerHeight * .4) bottom = Math.max(bottom, r.bottom);
     });
     return bottom;
   }
-  /* Walked down from <body>, not hit-tested: the panel can sit over the line. */
+  /* The reader's place on the line: the smallest text the line runs through, else text starting just under
+     it, else the smallest picture it runs through, else the first text or picture below it on screen. A tall
+     photo of which only a sliver still shows under the header doesn't count: the one filling the screen below
+     it stays put instead. Walked down from <body> through steady boxes only (not hit-tested: the panel can
+     sit over the line); a picture or text moved by its own transform (a hover zoom, a reveal) is held by the
+     steady box around it. */
+  function contentAt(y) {
+    var ih = innerHeight, iw = innerWidth, range = document.createRange(), budget = 8000;
+    var text = null, textH = Infinity, pic = null, picH = Infinity, below = null, belowTop = Infinity, next = null, nextTop = Infinity;
+    function take(el, t, b, isText) {
+      /* on the line, and more of it showing under the header than a sliver on its way out (half of it, or 24 px) */
+      if (t <= y && b > y && b - (y - 8) >= Math.min((b - t) / 2, 24)) {
+        if (isText && b - t < textH) { text = el; textH = b - t; }
+        if (!isText && b - t < picH) { pic = el; picH = b - t; }
+      } else if (t > y && t < ih) {
+        if (t < belowTop) { below = el; belowTop = t; }
+        if (isText && t <= y + 24 && t < nextTop) { next = el; nextTop = t; }
+      }
+    }
+    /* where an element's own text sits (a box can hold its text far from its edges) */
+    function textBox(el) {
+      var t = Infinity, b = -Infinity;
+      for (var n = el.firstChild; n; n = n.nextSibling) {
+        if (n.nodeType !== 3 || !/\S/.test(n.nodeValue || "")) continue;
+        range.selectNodeContents(n);
+        var r = range.getBoundingClientRect();
+        if (r.height) { t = Math.min(t, r.top); b = Math.max(b, r.bottom); }
+      }
+      return t < b ? [t, b] : null;
+    }
+    (function walk(node) {
+      for (var k = node.firstElementChild; k && budget-- > 0; k = k.nextElementSibling) {
+        if (k.id === "look-picker") continue;
+        var cs = getComputedStyle(k);
+        if (cs.display === "none") continue;
+        if (cs.display === "contents") { walk(k); continue; }
+        if (cs.position === "fixed" || cs.position === "sticky") continue;
+        var r = k.getBoundingClientRect();
+        if (r.height > 0 && (r.bottom <= y || r.top >= ih)) continue;
+        var seen = r.width > 0 && r.height > 0 && r.right > 0 && r.left < iw;
+        var replaced = REPLACED.test(k.tagName);
+        if (!steadyStyle(cs)) {
+          if (seen && node !== document.body) {
+            var media = !!k.querySelector("img, video, svg, canvas");
+            var isText = !replaced && !media && /\S/.test(k.textContent || "");
+            if (isText || replaced || media) take(node, r.top, r.bottom, isText);
+          }
+          continue;
+        }
+        if (seen && replaced) take(k, r.top, r.bottom, false);
+        else if (seen) { var tb = textBox(k); if (tb) take(k, tb[0], tb[1], true); }
+        if (!replaced) walk(k);
+      }
+    })(document.body);
+    /* Text just under the line beats the photo across it only when it sits beside the photo (another column); a
+       caption on the photo, or text under it in the same column, goes with the photo. */
+    if (next && pic) {
+      var a = pic.getBoundingClientRect(), b = next.getBoundingClientRect();
+      if (pic.contains(next) || (b.left < a.right && b.right > a.left)) next = null;
+    }
+    return text || next || pic || below;
+  }
+  /* Fallback: the deepest steady box across the line. */
   function lineAt(y) {
     var node = document.body, found = null;
     for (;;) {
       var kids = Array.prototype.slice.call(node.children), next = null;
       for (var i = 0; i < kids.length && !next; i++) {
         var k = kids[i], r = k.getBoundingClientRect();
+        if (k.id === "look-picker") continue;
         if (!r.height && !r.width) {
           if (getComputedStyle(k).display === "contents") kids.splice.apply(kids, [i + 1, 0].concat(Array.prototype.slice.call(k.children)));
           continue;
@@ -156,50 +233,58 @@
   function letGo() {
     if (!held) return;
     cancelAnimationFrame(held.raf);
+    if (held.ro) held.ro.disconnect();
     INTENT.forEach(function (t) { window.removeEventListener(t, onIntent, true); });
     var html = document.documentElement;
     html.style.overflowAnchor = held.anchor;
     html.style.scrollBehavior = held.behavior;
     held = null;
   }
-  /* At the very top the page stays at the top. Otherwise the first small element down the screen, or
-     the one under the header, and each box around it (for when the new look hides it). */
+  /* Where a mark is on screen now (null when it is gone or hidden). */
+  function markTop(c) {
+    if (!document.contains(c.el)) return null;
+    var b = c.el.getBoundingClientRect();
+    return b.height || b.width ? b.top : null;
+  }
+  /* At the very top the page stays at the top. Otherwise the content on the line under the header, and
+     each box around it (for when the new look hides it). */
   function holdPlace() {
     letGo();
     if (scrollTopNow() < 1) return;
-    var top = Math.min(headerBottom(), innerHeight * .5), span = innerHeight - top, el = null;
-    [8, span * .25, span * .45].some(function (dy) {
-      var c = lineAt(top + dy);
-      if (c && !el) el = c;
-      if (c && c.getBoundingClientRect().height <= innerHeight * .6) { el = c; return true; }
-      return false;
-    });
+    var top = Math.min(headerBottom(), innerHeight * .5);
+    var el = contentAt(top + 8) || lineAt(top + 8);
     if (!el) return;
     var marks = [];
     for (var n = el; n && n !== document.body; n = n.parentElement) marks.push({ el: n, top: n.getBoundingClientRect().top });
     var html = document.documentElement;
-    held = { marks: marks, raf: 0, anchor: html.style.overflowAnchor, behavior: html.style.scrollBehavior };
+    var ro = typeof ResizeObserver === "function" ? new ResizeObserver(function () { keepPlace(); }) : null;
+    held = { marks: marks, raf: 0, ro: ro, anchor: html.style.overflowAnchor, behavior: html.style.scrollBehavior };
     html.style.overflowAnchor = "none";
     html.style.scrollBehavior = "auto";
+    if (ro) {
+      ro.observe(html);
+      ro.observe(document.body);
+      marks.slice(0, 24).forEach(function (m) { ro.observe(m.el); });
+    }
     INTENT.forEach(function (t) { window.addEventListener(t, onIntent, { capture: true, passive: true }); });
   }
   /* The first of them still on the page keeps its place. One that rides with the screen once the look
-     lands can't be held by scrolling: the page is put back and let go. */
+     lands (it turned fixed or sticky: its top on screen doesn't change when the page scrolls) can't be
+     held by scrolling, so the page is put back and let go. */
   function keepPlace() {
     if (!held) return;
-    var m = null, r;
+    var m = null, top = null;
     for (var i = 0; i < held.marks.length && !m; i++) {
-      var c = held.marks[i];
-      if (!document.contains(c.el)) continue;
-      r = c.el.getBoundingClientRect();
-      if (r.width || r.height) m = c;
+      top = markTop(held.marks[i]);
+      if (top !== null) m = held.marks[i];
     }
     if (!m) { letGo(); return; }
-    var d = r.top - m.top;
+    var d = top - m.top;
     if (Math.abs(d) < 1) return;
     var y = scrollTopNow();
     scrollToY(y + d);
-    if (Math.abs(scrollTopNow() - y) >= 1 && Math.abs(m.el.getBoundingClientRect().top - m.top) > Math.abs(d) - .5) { scrollToY(y); letGo(); }
+    var after = markTop(m);
+    if (Math.abs(scrollTopNow() - y) >= 1 && after !== null && Math.abs(after - top) < .5) { scrollToY(y); letGo(); }
   }
   /* Held for 1.2 s at least, and until the fonts and the new logo are in (4 s at most). */
   function settle() {
