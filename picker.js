@@ -98,15 +98,20 @@
      Joshua (2026-10-01): a pick has to restyle the page wherever he is scrolled to. Nothing here scrolls
      on a pick, but a layout, preset, type or logo pick changes heights above and around the screen, and
      browsers keep the place their own way (Chrome's anchor slips when the layout changes, Safari keeps
-     none). So the content on the line just under the site's header holds still while the new look, its
-     fonts and its logo settle. The line sits under the pinned nav, the floating pill included. The text
-     or picture on that line (inside boxes that are not fixed, sticky or moved by a transform, which would
-     chase the scroll) keeps its place on screen, or the nearest box around it when the new look hides it.
-     It is put back every frame and whenever the page resizes (a ResizeObserver, so a late change from
-     another script can't show for a frame). The browser's own scroll anchoring and smooth scrolling are
-     off for the hold, and a wheel, touch, press or key outside the panel lets go at once. (The same hold
-     as the AERIOX offer engine, aeriox-app#110.) */
-  var held = null;
+     none). So the reader's line, just under the site's header, holds still while the new look, its fonts and
+     its logo settle. The line sits under the pinned nav, the floating pill included. What sits on that line
+     keeps its place on screen: its top, or, in text that starts above the screen, the character on the line
+     (so a paragraph that a new face rewraps stays put where it is being read, not at a top far out of sight).
+     When that content starts above the line inside a block that is mostly above it and ends in the top third
+     of the screen (the tail of a long quote, a hero or a tall photo mostly above the screen), the outermost
+     such block keeps its bottom instead, so what fills most of the screen, below it, stays. When the new look
+     hides any of them, the nearest box around it stands in. Places are read as laid out, before any
+     transform: the hero's copy replaying its entrance, a hover zoom or a parallax moves what is drawn, not
+     the page, so the hold never chases an animation. It is put back every frame and whenever the page
+     resizes (a ResizeObserver, so a late change from another script can't show for a frame). The browser's
+     own scroll anchoring and smooth scrolling are off for the hold, and a wheel, touch, press or key
+     outside the panel lets go at once. (The same hold as the AERIOX offer engine, aeriox-app#110.) */
+  var held = null, range = null;
   var INTENT = ["wheel", "touchstart", "pointerdown", "keydown"];
   /* Content a reader sees: text, or a picture, a video or a form field. */
   var REPLACED = /^(img|video|canvas|svg|iframe|input|textarea|select|object|embed)$/i;
@@ -115,23 +120,82 @@
     var x = window.scrollX || window.pageXOffset || 0;
     try { window.scrollTo({ top: y, left: x, behavior: "instant" }); } catch (e) { window.scrollTo(x, y); }
   }
-  /* A box that moves only with the page: not fixed or sticky, and not shifted by a transform (or the
-     translate / scale / rotate properties), which a reveal or parallax animates on its own. */
-  function steadyStyle(cs) {
-    if (cs.position === "fixed" || cs.position === "sticky") return false;
-    if (cs.transform && cs.transform !== "none" && cs.transform !== "matrix(1, 0, 0, 1, 0, 0)") return false;
-    if (cs.translate && cs.translate !== "none" && !/^(\s*0(px|%)?)+\s*$/.test(cs.translate)) return false;
-    if (cs.scale && cs.scale !== "none" && !/^(\s*1)+\s*$/.test(cs.scale)) return false;
-    if (cs.rotate && cs.rotate !== "none" && !/^\s*0(deg|rad|turn)?\s*$/.test(cs.rotate)) return false;
-    return true;
-  }
-  function steady(node) { return steadyStyle(getComputedStyle(node)); }
   function pinned(node) {
     for (var p = node; p && p !== document.body; p = p.parentElement) {
       var pos = getComputedStyle(p).position;
       if (pos === "fixed" || pos === "sticky") return true;
     }
     return false;
+  }
+  function isPanel(node) { return node.id === "look-picker"; }
+  /* How a box's own transform (with the translate and scale properties) moves what it draws down the
+     screen: y -> scale * y + shift, y measured from the box's top; null when it moves nothing. A rotation,
+     rare in a reveal, is left out. */
+  function moveOf(el, cs) {
+    var t = cs.transform, tr = cs.translate || "", sc = cs.scale || "";
+    var hasT = !!t && t !== "none" && t !== "matrix(1, 0, 0, 1, 0, 0)";
+    var hasTr = tr !== "" && tr !== "none" && !/^(\s*0(px|%)?)+\s*$/.test(tr);
+    var hasSc = sc !== "" && sc !== "none" && !/^(\s*1)+\s*$/.test(sc);
+    if (!hasT && !hasTr && !hasSc) return null;
+    var d = 1, f = 0, ty = 0, sy = 1, v, p;
+    if (hasT) {
+      v = t.slice(t.indexOf("(") + 1, -1).split(",").map(parseFloat);
+      if (v.length === 6) { d = v[3]; f = v[5]; } else if (v.length === 16) { d = v[5]; f = v[13]; }
+    }
+    if (hasTr) {
+      p = tr.trim().split(/\s+/)[1] || "0";
+      ty = /%$/.test(p) ? parseFloat(p) / 100 * (el.offsetHeight || 0) : parseFloat(p) || 0;
+    }
+    if (hasSc) {
+      p = sc.trim().split(/\s+/);
+      v = p[1] || p[0];
+      sy = /%$/.test(v) ? parseFloat(v) / 100 : parseFloat(v);
+      if (!isFinite(sy)) sy = 1;
+    }
+    var k = sy * d;
+    if (!isFinite(k) || Math.abs(k) < .01 || !isFinite(f) || !isFinite(ty)) return null;
+    var oy = parseFloat((cs.transformOrigin || "").split(" ")[1]) || 0;
+    return [k, oy * (1 - k) + ty + sy * f];
+  }
+  /* Where a point of el that is at y on screen now sits as laid out, with every transform on el and the
+     boxes around it taken off. */
+  function laidOut(el, y) {
+    var chain = [], c = 0, m = 1;   /* laid out = c + m * on screen */
+    for (var n = el; n && n !== document.documentElement; n = n.parentElement) chain.push(n);
+    for (var i = chain.length - 1; i >= 0; i--) {
+      var mv = moveOf(chain[i], getComputedStyle(chain[i]));
+      if (!mv) continue;
+      var at = c + m * chain[i].getBoundingClientRect().top;
+      c = at - mv[1] + (c - at) / mv[0];
+      m = m / mv[0];
+    }
+    return c + m * y;
+  }
+  /* The box of one character of a text (null when it draws nothing). */
+  function charBox(text, at) {
+    if (!range) range = document.createRange();
+    range.setStart(text, at);
+    range.setEnd(text, at + 1);
+    var b = range.getBoundingClientRect();
+    return b.height ? b : null;
+  }
+  /* The first character of el's own text on the reader's line, or after it. */
+  function lineChar(el, y) {
+    for (var n = el.firstChild; n; n = n.nextSibling) {
+      if (n.nodeType !== 3) continue;
+      var s = n.data, idx = [];
+      for (var i = 0; i < s.length && idx.length < 20000; i++) {
+        var c = s.charCodeAt(i);
+        if (c > 32 && (c < 0xd800 || c > 0xdfff)) idx.push(i);
+      }
+      var lo = 0, hi = idx.length;
+      while (lo < hi) {
+        var mid = (lo + hi) >> 1, b = charBox(n, idx[mid]);
+        if (b && b.bottom > y) hi = mid; else lo = mid + 1;
+      }
+      if (lo < idx.length && charBox(n, idx[lo])) return { text: n, at: idx[lo] };
+    }
+    return null;
   }
   /* The bottom of the site's header while it stays on screen: a fixed or sticky header or nav whose top is
      near the top of the screen (the floating pill nav sits a little below the edge). */
@@ -149,12 +213,12 @@
   /* The reader's place on the line: the smallest text the line runs through, else text starting just under
      it, else the smallest picture it runs through, else the first text or picture below it on screen. A tall
      photo of which only a sliver still shows under the header doesn't count: the one filling the screen below
-     it stays put instead. Walked down from <body> through steady boxes only (not hit-tested: the panel can
-     sit over the line); a picture or text moved by its own transform (a hover zoom, a reveal) is held by the
-     steady box around it. */
+     it stays put instead. Walked down from <body> past fixed and sticky boxes (not hit-tested: the panel can
+     sit over the line). */
   function contentAt(y) {
-    var ih = innerHeight, iw = innerWidth, range = document.createRange(), budget = 8000;
+    var ih = innerHeight, iw = innerWidth, budget = 8000;
     var text = null, textH = Infinity, pic = null, picH = Infinity, below = null, belowTop = Infinity, next = null, nextTop = Infinity;
+    if (!range) range = document.createRange();
     function take(el, t, b, isText) {
       /* on the line, and more of it showing under the header than a sliver on its way out (half of it, or 24 px) */
       if (t <= y && b > y && b - (y - 8) >= Math.min((b - t) / 2, 24)) {
@@ -178,7 +242,7 @@
     }
     (function walk(node) {
       for (var k = node.firstElementChild; k && budget-- > 0; k = k.nextElementSibling) {
-        if (k.id === "look-picker") continue;
+        if (isPanel(k)) continue;
         var cs = getComputedStyle(k);
         if (cs.display === "none") continue;
         if (cs.display === "contents") { walk(k); continue; }
@@ -187,14 +251,6 @@
         if (r.height > 0 && (r.bottom <= y || r.top >= ih)) continue;
         var seen = r.width > 0 && r.height > 0 && r.right > 0 && r.left < iw;
         var replaced = REPLACED.test(k.tagName);
-        if (!steadyStyle(cs)) {
-          if (seen && node !== document.body) {
-            var media = !!k.querySelector("img, video, svg, canvas");
-            var isText = !replaced && !media && /\S/.test(k.textContent || "");
-            if (isText || replaced || media) take(node, r.top, r.bottom, isText);
-          }
-          continue;
-        }
         if (seen && replaced) take(k, r.top, r.bottom, false);
         else if (seen) { var tb = textBox(k); if (tb) take(k, tb[0], tb[1], true); }
         if (!replaced) walk(k);
@@ -208,19 +264,20 @@
     }
     return text || next || pic || below;
   }
-  /* Fallback: the deepest steady box across the line. */
+  /* Fallback: the deepest box across the line that is not fixed or sticky. */
   function lineAt(y) {
     var node = document.body, found = null;
     for (;;) {
       var kids = Array.prototype.slice.call(node.children), next = null;
       for (var i = 0; i < kids.length && !next; i++) {
         var k = kids[i], r = k.getBoundingClientRect();
-        if (k.id === "look-picker") continue;
+        if (isPanel(k)) continue;
         if (!r.height && !r.width) {
           if (getComputedStyle(k).display === "contents") kids.splice.apply(kids, [i + 1, 0].concat(Array.prototype.slice.call(k.children)));
           continue;
         }
-        if (r.top <= y && r.bottom > y && steady(k)) next = k;
+        var pos = getComputedStyle(k).position;
+        if (r.top <= y && r.bottom > y && pos !== "fixed" && pos !== "sticky") next = k;
       }
       if (!next) return found;
       found = node = next;
@@ -240,13 +297,21 @@
     html.style.scrollBehavior = held.behavior;
     held = null;
   }
-  /* Where a mark is on screen now (null when it is gone or hidden). */
+  /* Where a mark is on screen now, as laid out (null when it is gone or hidden). */
   function markTop(c) {
+    var b;
+    if (c.text) {
+      if (!c.text.parentElement || !document.contains(c.text) || c.at >= c.text.length) return null;
+      b = charBox(c.text, c.at);
+      return b ? laidOut(c.text.parentElement, b.top) : null;
+    }
     if (!document.contains(c.el)) return null;
-    var b = c.el.getBoundingClientRect();
-    return b.height || b.width ? b.top : null;
+    b = c.el.getBoundingClientRect();
+    return b.height || b.width ? laidOut(c.el, c.bottom ? b.bottom : b.top) : null;
   }
-  /* At the very top the page stays at the top. Otherwise the content on the line under the header, and
+  /* At the very top the page stays at the top. Otherwise the reader's line under the header: when the
+     content on it starts above it, the bottom of the outermost block around it that is mostly above the line
+     and ends in the top third of the screen; else in text its character there; then the content itself and
      each box around it (for when the new look hides it). */
   function holdPlace() {
     letGo();
@@ -254,8 +319,18 @@
     var top = Math.min(headerBottom(), innerHeight * .5);
     var el = contentAt(top + 8) || lineAt(top + 8);
     if (!el) return;
-    var marks = [];
-    for (var n = el; n && n !== document.body; n = n.parentElement) marks.push({ el: n, top: n.getBoundingClientRect().top });
+    var y = top + 8, elTop = el.getBoundingClientRect().top, marks = [], ends = null, ch, r;
+    if (elTop < y) {
+      for (var e = el; e && e !== document.body; e = e.parentElement) {
+        r = e.getBoundingClientRect();
+        if (r.bottom > 0 && y - r.top > r.bottom - y && r.bottom - y < (innerHeight - y) / 3) ends = e;
+      }
+    }
+    if (ends) marks.push({ el: ends, bottom: true });
+    /* text that starts above the screen: its line on the reader's line holds (its own top is out of sight) */
+    else if (elTop < top - 1 && (ch = lineChar(el, y))) marks.push({ el: el, text: ch.text, at: ch.at });
+    for (var n = el; n && n !== document.body; n = n.parentElement) marks.push({ el: n });
+    marks = marks.filter(function (m) { m.top = markTop(m); return m.top !== null; });
     var html = document.documentElement;
     var ro = typeof ResizeObserver === "function" ? new ResizeObserver(function () { keepPlace(); }) : null;
     held = { marks: marks, raf: 0, ro: ro, anchor: html.style.overflowAnchor, behavior: html.style.scrollBehavior };
